@@ -28,30 +28,58 @@ class Queue:
         return frame
 
 
-class ExtractFrames(Thread):
+class FramesExtractor(Thread):
     def __init__(self):
         Thread.__init__(self)
-        self.videoCapture = cv2.VideoCapture('clip.mp4')    # Open the video clip
-        self.totalFrames = int(self.videoCapture.get(cv2.CAP_PROP_FRAME_COUNT))     # Total number of frames
+        self.video_capture = cv2.VideoCapture('clip.mp4')    # Open the video clip
+        self.total_frames = int(self.video_capture.get(cv2.CAP_PROP_FRAME_COUNT))     # Total number of frames
         self.count = 0  # Initialize number of frame counter
 
     def run(self):
         global frames_queue
         # read one frame
-        success, image = self.videoCapture.read()
+        success, image = self.video_capture.read()
 
         while True:
             if success and len(frames_queue.queue) <= frames_queue.queueCapacity:
                 frames_queue.append_frame(image)  # Append frame to the queue
-                success, image = self.videoCapture.read()    # Read another frame
+                success, image = self.video_capture.read()    # Read another frame
                 print(f'Reading frame {self.count}')
                 self.count += 1     # Increment the counter
 
-            if self.count == self.totalFrames:  # If counter reaches the total number of frames, break
+            if self.count == self.total_frames:  # If counter reaches the total number of frames, break
                 frames_queue.append_frame(-1)
                 break
         return
 
 
+class GrayScaleConvertor(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.count = 0  # initialize frame count
+
+    def run(self):
+        global frames_queue
+        global grayscale_queue
+        while True:
+            if frames_queue.queue and len(grayscale_queue.queue) <= grayscale_queue.queueCapacity:
+                frame = frames_queue.pop_frame()    # Get frame from the queue
+
+                if type(frame) == int and frame == -1:
+                    grayscale_queue.append_frame(-1)
+                    break
+                print(f'Converting Frame {self.count}')
+                grayscale_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)    # Convert the image to grayscale
+                grayscale_queue.append_frame(grayscale_frame)   # Append grayscale frame to the grayscale queue
+                self.count += 1     # Increment frame counter
+        return
+
+
 if __name__ == '__main__':
     frames_queue = Queue(9)
+    grayscale_queue = Queue(9)
+    extract_frames = FramesExtractor()
+    extract_frames.start()
+    convert_to_grayscale = GrayScaleConvertor()
+    convert_to_grayscale.start()
+
