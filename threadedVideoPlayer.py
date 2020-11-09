@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 from threading import Thread, Semaphore, Lock
-import cv2, time
+import cv2
 
 
 class Queue:
@@ -53,6 +53,35 @@ class FramesExtractor(Thread):
         return
 
 
+class Display(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.delay = 42     # The answer to everything
+        self.count = 0      # Initialize frame count
+
+    def run(self):
+        global grayscale_queue
+
+        while True:
+            if grayscale_queue.queue:
+                frame = grayscale_queue.pop_frame()     # Get frame from the grayscale queue
+
+                if type(frame) == int and frame == -1:
+                    break
+
+                print(f'Displaying Frame{self.count}')
+                # Display the frame in a window called "Video"
+                cv2.imshow('bIg_CHuNGuz.mp(math.sqrt(16))', frame)
+                # Get the next frame filename
+                self.count += 1
+                # Wait for 42 ms and check if the user wants to quit
+                if cv2.waitKey(self.delay) and 0xFF == ord('q'):
+                    break
+        # Make sure we cleanup the windows, otherwise we might end up with a mess
+        cv2.destroyAllWindows()
+        return
+
+
 class GrayScaleConvertor(Thread):
     def __init__(self):
         Thread.__init__(self)
@@ -75,6 +104,33 @@ class GrayScaleConvertor(Thread):
         return
 
 
+class Display(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.delay = 42     # The answer to everything
+        self.count = 0      # Initialize frame count
+
+    def run(self):
+        global grayscale_queue
+        while True:
+            if grayscale_queue.queue:
+                frame = grayscale_queue.pop_frame()     # Get frame from the grayscale queue
+
+                if type(frame) == int and frame == -1:
+                    break
+                print(f'Displaying Frame{self.count}')
+                # Display the frame in a window called "Video"
+                cv2.imshow('bIg_CHuNGuz.mp(math.sqrt(16))', frame)
+                # Get the next frame filename
+                self.count += 1
+                # Wait for 42 ms and check if the user wants to quit
+                if cv2.waitKey(self.delay) and 0xFF == ord('q'):
+                    break
+        # Make sure we cleanup the windows, otherwise we might end up with a mess
+        cv2.destroyAllWindows()
+        return
+
+
 if __name__ == '__main__':
     frames_queue = Queue(9)
     grayscale_queue = Queue(9)
@@ -82,4 +138,6 @@ if __name__ == '__main__':
     extract_frames.start()
     convert_to_grayscale = GrayScaleConvertor()
     convert_to_grayscale.start()
+    display_frames = Display()
+    display_frames.start()
 
