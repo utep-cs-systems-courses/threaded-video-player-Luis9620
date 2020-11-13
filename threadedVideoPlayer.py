@@ -6,25 +6,24 @@ import cv2
 class Queue:
     def __init__(self, capacity):
         self.queue = []
-        self.full_count = Semaphore(0)
-        self.empty_count = Semaphore(24)    # 24fps
+        self.semaphore = Semaphore(capacity)
         self.lock = Lock()
         self.queueCapacity = capacity   # Queues must be bounded at ten frames
 
     def append_frame(self, frame):  # Append frame to the queue
-        self.empty_count.acquire()
-        self.lock.acquire()     # Lock thread
+        self.lock.acquire()
+        self.semaphore.acquire()
         self.queue.append(frame)    # Append frame
-        self.lock.release()     # Release thread
-        self.full_count.release()
+        self.semaphore.release()
+        self.lock.release()
         return
 
     def pop_frame(self):    # Pop frame from the queue
-        self.full_count.acquire()
-        self.lock.acquire()     # Lock thread
+        self.lock.acquire()
+        self.semaphore.acquire()
         frame = self.queue.pop(0)   # Pop frame
-        self.lock.release()     # Release thread
-        self.empty_count.release()
+        self.semaphore.release()
+        self.lock.release()
         return frame
 
 
@@ -41,6 +40,7 @@ class FramesExtractor(Thread):
         success, image = self.video_capture.read()
 
         while True:
+            # Queues must be bounded at ten frames
             if success and len(frames_queue.queue) <= frames_queue.queueCapacity:
                 frames_queue.append_frame(image)  # Append frame to the queue
                 success, image = self.video_capture.read()    # Read another frame
@@ -62,6 +62,7 @@ class GrayScaleConvertor(Thread):
         global frames_queue
         global grayscale_queue
         while True:
+            # Queues must be bounded at ten frames
             if frames_queue.queue and len(grayscale_queue.queue) <= grayscale_queue.queueCapacity:
                 frame = frames_queue.pop_frame()    # Get frame from the queue
 
@@ -103,8 +104,8 @@ class Display(Thread):
 
 
 if __name__ == '__main__':
-    frames_queue = Queue(9)
-    grayscale_queue = Queue(9)
+    frames_queue = Queue(10)
+    grayscale_queue = Queue(10)
     extract_frames = FramesExtractor()
     extract_frames.start()
     convert_to_grayscale = GrayScaleConvertor()
